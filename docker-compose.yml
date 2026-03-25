@@ -34,10 +34,9 @@ services:
       - ${MEDIA_DIR:-/srv/media}:/media:ro
     environment:
       - JELLYFIN_PublishedServerUrl=${JELLYFIN_URL:-}
+    devices:
+      - /dev/dri:/dev/dri
     restart: unless-stopped
-    # Uncomment for Intel GPU transcoding:
-    # devices:
-    #   - /dev/dri:/dev/dri
 
   # ============================================================
   # FILES
