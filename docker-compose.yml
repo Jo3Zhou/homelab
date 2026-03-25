@@ -36,6 +36,8 @@ services:
       - ${MEDIA_DIR:-/srv/media}:/media:ro
     environment:
       - JELLYFIN_PublishedServerUrl=${JELLYFIN_URL:-}
+    group_add:
+      - "105"
     devices:
       - /dev/dri:/dev/dri
     restart: unless-stopped
