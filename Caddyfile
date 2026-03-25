@@ -1,0 +1,11 @@
+:80 {
+    # Filebrowser at /files
+    handle /files* {
+        reverse_proxy localhost:8080
+    }
+
+    # Jellyfin at /
+    handle {
+        reverse_proxy localhost:8096
+    }
+}

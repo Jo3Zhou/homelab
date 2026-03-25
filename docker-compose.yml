@@ -5,7 +5,22 @@ services:
   # Tailscale runs on the host, not in Docker.
   # Install: curl -fsSL https://tailscale.com/install.sh | sh
   # Login:   sudo tailscale up
+  # Funnel:  sudo tailscale funnel --bg 80
   # ============================================================
+
+  # ============================================================
+  # REVERSE PROXY
+  # ============================================================
+
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    network_mode: host
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    restart: unless-stopped
 
   # ============================================================
   # MEDIA
@@ -33,7 +48,7 @@ services:
     image: filebrowser/filebrowser:latest
     container_name: filebrowser
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     volumes:
       - ${FILES_ROOT:-/srv/files}:/srv
       - filebrowser-config:/config
@@ -41,24 +56,8 @@ services:
     environment:
       - FB_DATABASE=/database/filebrowser.db
       - FB_CONFIG=/config/filebrowser.json
+      - FB_BASEURL=/files
     restart: unless-stopped
-
-  # ============================================================
-  # PLACEHOLDER: REVERSE PROXY
-  # e.g. Nginx Proxy Manager, Caddy, Traefik
-  # ============================================================
-
-  # reverse-proxy:
-  #   image: caddy:latest
-  #   container_name: caddy
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - caddy-data:/data
-  #     - caddy-config:/config
-  #     - ./Caddyfile:/etc/caddy/Caddyfile
-  #   restart: unless-stopped
 
   # ============================================================
   # PLACEHOLDER: DASHBOARD
@@ -162,12 +161,12 @@ services:
   #   restart: unless-stopped
 
 volumes:
+  caddy-data:
+  caddy-config:
   jellyfin-config:
   jellyfin-cache:
   filebrowser-config:
   filebrowser-db:
-  # caddy-data:
-  # caddy-config:
   # homepage-config:
   # uptime-kuma-data:
   # qbittorrent-config:
