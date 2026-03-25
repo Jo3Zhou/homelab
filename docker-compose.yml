@@ -1,0 +1,191 @@
+services:
+  # ============================================================
+  # NETWORKING
+  # ============================================================
+
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    hostname: ${TAILSCALE_HOSTNAME:-homelab}
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_EXTRA_ARGS=${TS_EXTRA_ARGS:-}
+      - TS_STATE_DIR=/var/lib/tailscale
+    restart: unless-stopped
+
+  # ============================================================
+  # MEDIA
+  # ============================================================
+
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    network_mode: host
+    volumes:
+      - jellyfin-config:/config
+      - jellyfin-cache:/cache
+      - ${MEDIA_DIR:-/srv/media}:/media:ro
+    environment:
+      - JELLYFIN_PublishedServerUrl=${JELLYFIN_URL:-}
+    restart: unless-stopped
+    # Uncomment for Intel GPU transcoding:
+    # devices:
+    #   - /dev/dri:/dev/dri
+
+  # ============================================================
+  # FILES
+  # ============================================================
+
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    ports:
+      - "8080:80"
+    volumes:
+      - ${FILES_ROOT:-/srv/files}:/srv
+      - filebrowser-config:/config
+      - filebrowser-db:/database
+    environment:
+      - FB_DATABASE=/database/filebrowser.db
+      - FB_CONFIG=/config/filebrowser.json
+    restart: unless-stopped
+
+  # ============================================================
+  # PLACEHOLDER: REVERSE PROXY
+  # e.g. Nginx Proxy Manager, Caddy, Traefik
+  # ============================================================
+
+  # reverse-proxy:
+  #   image: caddy:latest
+  #   container_name: caddy
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - caddy-data:/data
+  #     - caddy-config:/config
+  #     - ./Caddyfile:/etc/caddy/Caddyfile
+  #   restart: unless-stopped
+
+  # ============================================================
+  # PLACEHOLDER: DASHBOARD
+  # e.g. Homepage, Homarr, Dashy
+  # ============================================================
+
+  # dashboard:
+  #   image: ghcr.io/gethomepage/homepage:latest
+  #   container_name: homepage
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - homepage-config:/app/config
+  #   restart: unless-stopped
+
+  # ============================================================
+  # PLACEHOLDER: MONITORING
+  # e.g. Grafana + Prometheus, Uptime Kuma, Netdata
+  # ============================================================
+
+  # uptime-kuma:
+  #   image: louislam/uptime-kuma:latest
+  #   container_name: uptime-kuma
+  #   ports:
+  #     - "3001:3001"
+  #   volumes:
+  #     - uptime-kuma-data:/app/data
+  #   restart: unless-stopped
+
+  # ============================================================
+  # PLACEHOLDER: DOWNLOAD
+  # e.g. qBittorrent, Transmission, Aria2
+  # ============================================================
+
+  # qbittorrent:
+  #   image: lscr.io/linuxserver/qbittorrent:latest
+  #   container_name: qbittorrent
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - WEBUI_PORT=8090
+  #   ports:
+  #     - "8090:8090"
+  #     - "6881:6881"
+  #     - "6881:6881/udp"
+  #   volumes:
+  #     - qbittorrent-config:/config
+  #     - ${DOWNLOAD_DIR:-/srv/downloads}:/downloads
+  #   restart: unless-stopped
+
+  # ============================================================
+  # PLACEHOLDER: AUTOMATION / *ARR STACK
+  # e.g. Sonarr, Radarr, Prowlarr
+  # ============================================================
+
+  # prowlarr:
+  #   image: lscr.io/linuxserver/prowlarr:latest
+  #   container_name: prowlarr
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #   ports:
+  #     - "9696:9696"
+  #   volumes:
+  #     - prowlarr-config:/config
+  #   restart: unless-stopped
+
+  # ============================================================
+  # PLACEHOLDER: PASSWORD MANAGER
+  # e.g. Vaultwarden (Bitwarden compatible)
+  # ============================================================
+
+  # vaultwarden:
+  #   image: vaultwarden/server:latest
+  #   container_name: vaultwarden
+  #   ports:
+  #     - "8888:80"
+  #   volumes:
+  #     - vaultwarden-data:/data
+  #   environment:
+  #     - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN:-}
+  #   restart: unless-stopped
+
+  # ============================================================
+  # PLACEHOLDER: NOTES / WIKI
+  # e.g. Obsidian LiveSync backend, Wiki.js, Outline
+  # ============================================================
+
+  # ============================================================
+  # PLACEHOLDER: SMART HOME
+  # e.g. Home Assistant
+  # ============================================================
+
+  # homeassistant:
+  #   image: ghcr.io/home-assistant/home-assistant:stable
+  #   container_name: homeassistant
+  #   network_mode: host
+  #   volumes:
+  #     - homeassistant-config:/config
+  #     - /etc/localtime:/etc/localtime:ro
+  #   restart: unless-stopped
+
+volumes:
+  tailscale-state:
+  jellyfin-config:
+  jellyfin-cache:
+  filebrowser-config:
+  filebrowser-db:
+  # caddy-data:
+  # caddy-config:
+  # homepage-config:
+  # uptime-kuma-data:
+  # qbittorrent-config:
+  # prowlarr-config:
+  # vaultwarden-data:
+  # homeassistant-config:
