@@ -41,23 +41,9 @@ services:
     restart: unless-stopped
 
   # ============================================================
-  # FILES
+  # PLACEHOLDER: FILES
+  # e.g. Filebrowser, Nextcloud
   # ============================================================
-
-  filebrowser:
-    image: filebrowser/filebrowser:latest
-    container_name: filebrowser
-    ports:
-      - "127.0.0.1:8080:80"
-    volumes:
-      - ${FILES_ROOT:-/srv/files}:/srv
-      - filebrowser-config:/config
-      - filebrowser-db:/database
-    environment:
-      - FB_DATABASE=/database/filebrowser.db
-      - FB_CONFIG=/config/filebrowser.json
-      - FB_BASEURL=/files
-    restart: unless-stopped
 
   # ============================================================
   # PLACEHOLDER: DASHBOARD
@@ -165,8 +151,8 @@ volumes:
   caddy-config:
   jellyfin-config:
   jellyfin-cache:
-  filebrowser-config:
-  filebrowser-db:
+  # filebrowser-config:
+  # filebrowser-db:
   # homepage-config:
   # uptime-kuma-data:
   # qbittorrent-config:
