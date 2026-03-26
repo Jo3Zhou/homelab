@@ -11,6 +11,7 @@ Self-hosted media and file server running on Docker, exposed via Tailscale.
 | [Radarr](https://radarr.video) | `/radarr` | Movie collection manager |
 | [Filebrowser](https://filebrowser.xyz) | `/files` | File manager |
 | [Pingvin Share](https://pingvin-share.dev.eliasschneider.com) | `/share` | File sharing with expiry |
+| [Uptime Kuma](https://uptime.kuma.pet) | `/status` | Service monitoring |
 | [Caddy](https://caddyserver.com) | — | Reverse proxy |
 | [Tailscale](https://tailscale.com) | — | Remote access (runs on host) |
 
@@ -61,6 +62,11 @@ Filebrowser:
 Pingvin Share:
 - Open `http://localhost/share`
 - Complete the setup wizard to create an admin account
+
+Uptime Kuma:
+- Open `http://localhost/status` and create an admin account
+- Add monitors for each service (Jellyfin, Radarr, Filebrowser, Pingvin Share)
+- Create a status page with slug `homelab` for the Homepage widget
 
 **5. Set up Tailscale (remote access)**
 ```bash

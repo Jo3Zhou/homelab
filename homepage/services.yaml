@@ -17,6 +17,16 @@
           url: http://localhost:7878
           key: {{RADARR_API_KEY}}
 
+- Monitoring:
+    - Uptime Kuma:
+        icon: uptime-kuma.png
+        href: /status
+        description: Service status
+        widget:
+          type: uptimekuma
+          url: http://localhost:3002
+          slug: homelab
+
 - Files:
     - Filebrowser:
         icon: filebrowser.png

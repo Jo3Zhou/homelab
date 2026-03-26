@@ -73,18 +73,18 @@ services:
     restart: unless-stopped
 
   # ============================================================
-  # PLACEHOLDER: MONITORING
-  # e.g. Grafana + Prometheus, Uptime Kuma, Netdata
+  # MONITORING
   # ============================================================
 
-  # uptime-kuma:
-  #   image: louislam/uptime-kuma:latest
-  #   container_name: uptime-kuma
-  #   ports:
-  #     - "3001:3001"
-  #   volumes:
-  #     - uptime-kuma-data:/app/data
-  #   restart: unless-stopped
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    network_mode: host
+    environment:
+      - PORT=3002
+    volumes:
+      - uptime-kuma-data:/app/data
+    restart: unless-stopped
 
   # ============================================================
   # PLACEHOLDER: DOWNLOAD
@@ -198,7 +198,7 @@ volumes:
   radarr-config:
   pingvin-data:
   pingvin-images:
-  # uptime-kuma-data:
+  uptime-kuma-data:
   # qbittorrent-config:
   # prowlarr-config:
   # vaultwarden-data:

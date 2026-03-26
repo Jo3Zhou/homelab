@@ -19,6 +19,11 @@
         reverse_proxy localhost:3000
     }
 
+    # Uptime Kuma at /status
+    handle /status* {
+        reverse_proxy localhost:3002
+    }
+
     # Homepage dashboard (catch-all)
     handle {
         reverse_proxy localhost:3001
