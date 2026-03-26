@@ -47,6 +47,8 @@
 
     # Homepage dashboard (port 3001) — catch-all
     handle {
-        reverse_proxy localhost:3001
+        reverse_proxy localhost:3001 {
+            header_up Host localhost
+        }
     }
 }
