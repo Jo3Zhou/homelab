@@ -12,6 +12,16 @@ services:
   # REVERSE PROXY
   # ============================================================
 
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    network_mode: host
+    command: --base-url /portainer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+    restart: unless-stopped
+
   caddy:
     image: caddy:latest
     container_name: caddy
@@ -190,6 +200,7 @@ services:
   #   restart: unless-stopped
 
 volumes:
+  portainer-data:
   caddy-data:
   caddy-config:
   jellyfin-cache:

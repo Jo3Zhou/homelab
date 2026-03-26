@@ -20,6 +20,11 @@
         #   key: YOUR_RADARR_API_KEY
 
 - Monitoring:
+    - Portainer:
+        icon: portainer.png
+        href: /portainer
+        description: Container management
+
     - Uptime Kuma:
         icon: uptime-kuma.png
         href: /status
