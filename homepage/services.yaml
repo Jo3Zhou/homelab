@@ -3,29 +3,27 @@
         icon: jellyfin.png
         href: /jellyfin
         description: Media server
-        widget:
-          type: jellyfin
-          url: http://localhost:8096
-          key: {{JELLYFIN_API_KEY}}
+        # Uncomment and add API key to enable widget:
+        # widget:
+        #   type: jellyfin
+        #   url: http://localhost:8096
+        #   key: YOUR_JELLYFIN_API_KEY
 
     - Radarr:
         icon: radarr.png
         href: /radarr
         description: Movie collection manager
-        widget:
-          type: radarr
-          url: http://localhost:7878
-          key: {{RADARR_API_KEY}}
+        # Uncomment and add API key to enable widget:
+        # widget:
+        #   type: radarr
+        #   url: http://localhost:7878
+        #   key: YOUR_RADARR_API_KEY
 
 - Monitoring:
     - Uptime Kuma:
         icon: uptime-kuma.png
         href: /status
         description: Service status
-        widget:
-          type: uptimekuma
-          url: http://localhost:3002
-          slug: homelab
 
 - Files:
     - Filebrowser:
@@ -34,6 +32,6 @@
         description: File manager
 
     - Pingvin Share:
-        icon: https://raw.githubusercontent.com/stonith404/pingvin-share/main/frontend/public/img/logo.png
+        icon: pingvin-share.png
         href: /share
         description: File sharing

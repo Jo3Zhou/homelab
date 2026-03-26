@@ -1,6 +1,15 @@
-- greeting:
+- datetime:
     text_size: 2xl
     format:
       dateStyle: long
       timeStyle: short
       hourCycle: h23
+
+- resources:
+    cpu: true
+    memory: true
+    disk: /
+
+- search:
+    provider: duckduckgo
+    target: _blank
