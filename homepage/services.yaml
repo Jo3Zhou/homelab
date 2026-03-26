@@ -22,7 +22,7 @@
 - Monitoring:
     - Portainer:
         icon: portainer.png
-        href: /portainer
+        href: http://100.90.143.17:9000
         description: Container management
 
     - Uptime Kuma:

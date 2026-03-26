@@ -22,11 +22,6 @@
         reverse_proxy localhost:8096
     }
 
-    # Portainer container management (port 9000)
-    handle /portainer* {
-        reverse_proxy localhost:9000
-    }
-
     # Radarr movie manager (port 7878)
     handle /radarr* {
         reverse_proxy localhost:7878

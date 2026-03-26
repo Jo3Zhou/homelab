@@ -16,7 +16,6 @@ services:
     image: portainer/portainer-ce:latest
     container_name: portainer
     network_mode: host
-    command: --base-url /portainer
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer-data:/data
