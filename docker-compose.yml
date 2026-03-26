@@ -31,7 +31,7 @@ services:
     container_name: jellyfin
     network_mode: host
     volumes:
-      - jellyfin-config:/config
+      - ./jellyfin/config:/config
       - jellyfin-cache:/cache
       - ${MEDIA_DIR:-/srv/media}:/media:ro
     environment:
@@ -192,7 +192,6 @@ services:
 volumes:
   caddy-data:
   caddy-config:
-  jellyfin-config:
   jellyfin-cache:
   filebrowser-config:
   filebrowser-db:
