@@ -1,38 +1,51 @@
-# Public (via Tailscale Funnel) — Jellyfin only
+# ── Port 80 ────────────────────────────────────────────────────
+# Public access via Tailscale Funnel — Jellyfin only
+# ───────────────────────────────────────────────────────────────
 :80 {
+    # Jellyfin media server (port 8096)
     handle /jellyfin* {
         reverse_proxy localhost:8096
     }
 
+    # Block everything else from public access
     handle {
         respond 403
     }
 }
 
-# Internal (via Tailscale Serve) — all services
+# ── Port 8888 ──────────────────────────────────────────────────
+# Internal access via Tailscale only — all services
+# ───────────────────────────────────────────────────────────────
 :8888 {
+    # Jellyfin media server (port 8096)
     handle /jellyfin* {
         reverse_proxy localhost:8096
     }
 
+    # Radarr movie manager (port 7878)
     handle /radarr* {
         reverse_proxy localhost:7878
     }
 
+    # Filebrowser file manager (port 8081)
     handle /files* {
-        reverse_proxy localhost:8080
+        reverse_proxy localhost:8081
     }
 
+    # Pingvin Share file sharing (port 3000)
     handle /share* {
         reverse_proxy localhost:3000
     }
 
+    # Uptime Kuma status monitor (port 3002)
+    # Host header rewritten to localhost to pass Uptime Kuma's host validation
     handle /status* {
         reverse_proxy localhost:3002 {
             header_up Host localhost
         }
     }
 
+    # Homepage dashboard (port 3001) — catch-all
     handle {
         reverse_proxy localhost:3001
     }
