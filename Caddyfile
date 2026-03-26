@@ -1,11 +1,37 @@
+# Public (via Tailscale Funnel) — Jellyfin only
 :80 {
-    # Only Jellyfin is exposed publicly via Tailscale Funnel
     handle /jellyfin* {
         reverse_proxy localhost:8096
     }
 
-    # Block everything else from public access
     handle {
         respond 403
+    }
+}
+
+# Internal (via Tailscale Serve) — all services
+:8888 {
+    handle /jellyfin* {
+        reverse_proxy localhost:8096
+    }
+
+    handle /radarr* {
+        reverse_proxy localhost:7878
+    }
+
+    handle /files* {
+        reverse_proxy localhost:8080
+    }
+
+    handle /share* {
+        reverse_proxy localhost:3000
+    }
+
+    handle /status* {
+        reverse_proxy localhost:3002
+    }
+
+    handle {
+        reverse_proxy localhost:3001
     }
 }
