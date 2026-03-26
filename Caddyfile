@@ -1,31 +1,11 @@
 :80 {
-    # Filebrowser at /files
-    handle /files* {
-        reverse_proxy localhost:8080
-    }
-
-    # Jellyfin at /jellyfin
+    # Only Jellyfin is exposed publicly via Tailscale Funnel
     handle /jellyfin* {
         reverse_proxy localhost:8096
     }
 
-    # Radarr at /radarr
-    handle /radarr* {
-        reverse_proxy localhost:7878
-    }
-
-    # Pingvin Share at /share
-    handle /share* {
-        reverse_proxy localhost:3000
-    }
-
-    # Uptime Kuma at /status
-    handle /status* {
-        reverse_proxy localhost:3002
-    }
-
-    # Homepage dashboard (catch-all)
+    # Block everything else from public access
     handle {
-        reverse_proxy localhost:3001
+        respond 403
     }
 }
