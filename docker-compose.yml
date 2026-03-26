@@ -164,7 +164,7 @@ services:
     network_mode: host
     environment:
       - TRUST_PROXY=true
-      - BASE_URL=http://localhost/share
+      - BASE_URL=http://localhost:8888/share
     volumes:
       - pingvin-data:/opt/app/backend/data
       - pingvin-images:/opt/app/frontend/public/img
