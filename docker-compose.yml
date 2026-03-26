@@ -43,23 +43,34 @@ services:
     restart: unless-stopped
 
   # ============================================================
-  # PLACEHOLDER: FILES
-  # e.g. Filebrowser, Nextcloud
+  # FILES
   # ============================================================
 
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    network_mode: host
+    volumes:
+      - filebrowser-config:/config
+      - filebrowser-db:/database
+      - ${FILES_DIR:-/srv}:/srv
+    environment:
+      - FB_BASEURL=/files
+    restart: unless-stopped
+
   # ============================================================
-  # PLACEHOLDER: DASHBOARD
-  # e.g. Homepage, Homarr, Dashy
+  # DASHBOARD
   # ============================================================
 
-  # dashboard:
-  #   image: ghcr.io/gethomepage/homepage:latest
-  #   container_name: homepage
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     - homepage-config:/app/config
-  #   restart: unless-stopped
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    network_mode: host
+    environment:
+      - PORT=3001
+    volumes:
+      - ./homepage:/app/config
+    restart: unless-stopped
 
   # ============================================================
   # PLACEHOLDER: MONITORING
@@ -97,18 +108,31 @@ services:
   #   restart: unless-stopped
 
   # ============================================================
-  # PLACEHOLDER: AUTOMATION / *ARR STACK
-  # e.g. Sonarr, Radarr, Prowlarr
+  # AUTOMATION
   # ============================================================
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    network_mode: host
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - RADARR__SERVER__URLBASE=/radarr
+    volumes:
+      - radarr-config:/config
+      - ${MEDIA_DIR:-/srv/media}/Movies:/movies
+      - ${DOWNLOAD_DIR:-/srv/downloads}:/downloads
+    restart: unless-stopped
 
   # prowlarr:
   #   image: lscr.io/linuxserver/prowlarr:latest
   #   container_name: prowlarr
+  #   network_mode: host
   #   environment:
   #     - PUID=1000
   #     - PGID=1000
-  #   ports:
-  #     - "9696:9696"
+  #     - PROWLARR__SERVER__URLBASE=/prowlarr
   #   volumes:
   #     - prowlarr-config:/config
   #   restart: unless-stopped
@@ -128,6 +152,22 @@ services:
   #   environment:
   #     - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN:-}
   #   restart: unless-stopped
+
+  # ============================================================
+  # FILE SHARING
+  # ============================================================
+
+  pingvin-share:
+    image: stonith404/pingvin-share:latest
+    container_name: pingvin-share
+    network_mode: host
+    environment:
+      - TRUST_PROXY=true
+      - BASE_URL=http://localhost/share
+    volumes:
+      - pingvin-data:/opt/app/backend/data
+      - pingvin-images:/opt/app/frontend/public/img
+    restart: unless-stopped
 
   # ============================================================
   # PLACEHOLDER: NOTES / WIKI
@@ -153,9 +193,11 @@ volumes:
   caddy-config:
   jellyfin-config:
   jellyfin-cache:
-  # filebrowser-config:
-  # filebrowser-db:
-  # homepage-config:
+  filebrowser-config:
+  filebrowser-db:
+  radarr-config:
+  pingvin-data:
+  pingvin-images:
   # uptime-kuma-data:
   # qbittorrent-config:
   # prowlarr-config:

@@ -4,8 +4,23 @@
         reverse_proxy localhost:8080
     }
 
-    # Jellyfin at /
-    handle {
+    # Jellyfin at /jellyfin
+    handle /jellyfin* {
         reverse_proxy localhost:8096
+    }
+
+    # Radarr at /radarr
+    handle /radarr* {
+        reverse_proxy localhost:7878
+    }
+
+    # Pingvin Share at /share
+    handle /share* {
+        reverse_proxy localhost:3000
+    }
+
+    # Homepage dashboard (catch-all)
+    handle {
+        reverse_proxy localhost:3001
     }
 }

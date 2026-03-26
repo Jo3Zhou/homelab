@@ -1,0 +1,6 @@
+- greeting:
+    text_size: 2xl
+    format:
+      dateStyle: long
+      timeStyle: short
+      hourCycle: h23

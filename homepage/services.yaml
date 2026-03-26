@@ -1,0 +1,29 @@
+- Media:
+    - Jellyfin:
+        icon: jellyfin.png
+        href: /jellyfin
+        description: Media server
+        widget:
+          type: jellyfin
+          url: http://localhost:8096
+          key: {{JELLYFIN_API_KEY}}
+
+    - Radarr:
+        icon: radarr.png
+        href: /radarr
+        description: Movie collection manager
+        widget:
+          type: radarr
+          url: http://localhost:7878
+          key: {{RADARR_API_KEY}}
+
+- Files:
+    - Filebrowser:
+        icon: filebrowser.png
+        href: /files
+        description: File manager
+
+    - Pingvin Share:
+        icon: https://raw.githubusercontent.com/stonith404/pingvin-share/main/frontend/public/img/logo.png
+        href: /share
+        description: File sharing
