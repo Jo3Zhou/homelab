@@ -28,7 +28,9 @@
     }
 
     handle /status* {
-        reverse_proxy localhost:3002
+        reverse_proxy localhost:3002 {
+            header_up Host localhost
+        }
     }
 
     handle {
