@@ -55,7 +55,6 @@ services:
       - filebrowser-db:/database
       - ${FILES_DIR:-/srv}:/srv
     environment:
-      - FB_BASEURL=/files
       - FB_PORT=8081
     restart: unless-stopped
 

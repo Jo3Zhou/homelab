@@ -28,7 +28,7 @@
     }
 
     # Filebrowser file manager (port 8081)
-    handle /files* {
+    handle_path /files* {
         reverse_proxy localhost:8081
     }
 
