@@ -69,7 +69,7 @@ services:
     network_mode: host
     environment:
       - PORT=3001
-      - HOMEPAGE_ALLOWED_HOSTS=100.90.143.17:8888,localhost:3001
+      - HOMEPAGE_ALLOWED_HOSTS=*
     volumes:
       - ./homepage:/app/config
     restart: unless-stopped
