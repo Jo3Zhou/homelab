@@ -1,215 +1,524 @@
+# ============================================================
+# HOMELAB DOCKER COMPOSE FILES
+# ThinkCentre i3-9100 + Synology NAS
+# ============================================================
+# Directory structure:
+# /opt/homelab/
+# ├── .env                    ← global secrets (never commit)
+# ├── .gitignore
+# ├── caddy/
+# │   ├── docker-compose.yml
+# │   ├── Dockerfile          ← custom build with Cloudflare DNS plugin
+# │   ├── Caddyfile
+# │   └── data/               ← certs and state (gitignored)
+# ├── jellyfin/
+# │   └── docker-compose.yml
+# ├── immich/
+# │   ├── docker-compose.yml
+# │   └── .env
+# ├── nextcloud/
+# │   ├── docker-compose.yml
+# │   └── .env
+# └── vaultwarden/
+#     └── docker-compose.yml
+# ============================================================
+
+
+# ============================================================
+# SETUP: Run these commands before anything else
+# ============================================================
+# 1. docker network create proxy
+# 2. mkdir -p /mnt/nas/{media,photos,documents,backups}
+# 3. mount -a  (after setting up /etc/fstab)
+# 4. Copy each section below into its own docker-compose.yml
+# 5. Create .env files from .env.example templates
+# 6. Start Caddy first, then everything else
+
+
+# ============================================================
+# /opt/homelab/.gitignore
+# ============================================================
+# **/.env
+# **/certs/
+# **/cache/
+# **/logs/
+# **/pgdata/
+# **/dbdata/
+# **/data/
+
+
+# ============================================================
+# /opt/homelab/.env  (global, never commit to git)
+# ============================================================
+# CF_API_TOKEN=your_cloudflare_api_token        ← used by Caddy for DNS-01 TLS certs
+# CF_TUNNEL_TOKEN=your_cloudflare_tunnel_token  ← used by cloudflared (Zero Trust > Tunnels)
+# DOMAIN=yourdomain.com
+# ACME_EMAIL=you@email.com
+
+
+# ============================================================
+# FILE: /opt/homelab/caddy/docker-compose.yml
+# ============================================================
+# Must be started FIRST before all other services.
+# Uses a custom build to include the Cloudflare DNS plugin
+# for automatic TLS via DNS-01 challenge (no open ports needed
+# for cert issuance).
+# ============================================================
+
+---
 services:
-
-  # ============================================================
-  # NETWORKING
-  # Tailscale runs on the host, not in Docker.
-  # Install: curl -fsSL https://tailscale.com/install.sh | sh
-  # Login:   sudo tailscale up
-  # Funnel:  sudo tailscale funnel --bg 80
-  # ============================================================
-
-  # ============================================================
-  # REVERSE PROXY
-  # ============================================================
-
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: portainer
-    network_mode: host
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - portainer-data:/data
-    restart: unless-stopped
-
   caddy:
-    image: caddy:latest
+    build: .                            # builds from caddy/Dockerfile
     container_name: caddy
-    network_mode: host
-    volumes:
-      - caddy-data:/data
-      - caddy-config:/config
-      - ./Caddyfile:/etc/caddy/Caddyfile
     restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"                   # HTTP/3
+    networks:
+      - proxy
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data:/data                    # certs and state (gitignored)
+    environment:
+      - CF_API_TOKEN=${CF_API_TOKEN}
+      - DOMAIN=${DOMAIN}
+      - ACME_EMAIL=${ACME_EMAIL}
 
-  # ============================================================
-  # MEDIA
-  # ============================================================
+networks:
+  proxy:
+    external: true
 
+# ============================================================
+# FILE: /opt/homelab/caddy/Dockerfile
+# ============================================================
+# Builds Caddy with the Cloudflare DNS plugin.
+# Rebuild when updating Caddy: docker compose build --no-cache
+# ============================================================
+#
+# FROM caddy:builder AS builder
+# RUN xcaddy build --with github.com/caddy-dns/cloudflare
+#
+# FROM caddy:latest
+# COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+
+# ============================================================
+# FILE: /opt/homelab/caddy/Caddyfile
+# ============================================================
+# Snippet used by all sites to issue certs via Cloudflare DNS.
+# This works even if ports 80/443 are not forwarded on your
+# router — DNS-01 challenge only needs outbound internet.
+# ============================================================
+#
+# (cloudflare_tls) {
+#     tls {
+#         dns cloudflare {env.CF_API_TOKEN}
+#         resolvers 1.1.1.1
+#     }
+# }
+#
+# # Jellyfin — media server
+# jellyfin.{env.DOMAIN} {
+#     import cloudflare_tls
+#     reverse_proxy jellyfin:8096
+# }
+#
+# # Immich — photo backup
+# photos.{env.DOMAIN} {
+#     import cloudflare_tls
+#     reverse_proxy immich-server:2283
+# }
+#
+# # Nextcloud — file storage
+# cloud.{env.DOMAIN} {
+#     import cloudflare_tls
+#     reverse_proxy nextcloud:80
+#     redir /.well-known/carddav /remote.php/dav 301
+#     redir /.well-known/caldav  /remote.php/dav 301
+#     header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+# }
+#
+# # Vaultwarden — password manager
+# vault.{env.DOMAIN} {
+#     import cloudflare_tls
+#     reverse_proxy vaultwarden:80
+# }
+#
+# # Grafana — monitoring (Tailscale-only, not in Cloudflare Tunnel)
+# grafana.{env.DOMAIN} {
+#     import cloudflare_tls
+#     reverse_proxy grafana:3000
+# }
+
+
+# ============================================================
+# FILE: /opt/homelab/jellyfin/docker-compose.yml
+# ============================================================
+# Films and media server
+# Media lives on NAS at /mnt/nas/media
+# ============================================================
+
+---
+services:
   jellyfin:
     image: jellyfin/jellyfin:latest
     container_name: jellyfin
-    network_mode: host
-    volumes:
-      - ./jellyfin/config:/config
-      - jellyfin-cache:/cache
-      - ${MEDIA_DIR:-/srv/media}:/media:ro
-    environment:
-      - JELLYFIN_PublishedServerUrl=${JELLYFIN_URL:-}
-    group_add:
-      - "105"
+    restart: unless-stopped
+    networks:
+      - proxy
+    # iGPU passthrough for hardware transcoding (i3-9100 Intel UHD 630)
     devices:
-      - /dev/dri:/dev/dri
-    restart: unless-stopped
-
-  # ============================================================
-  # FILES
-  # ============================================================
-
-  filebrowser:
-    image: filebrowser/filebrowser:latest
-    container_name: filebrowser
-    network_mode: host
+      - /dev/dri/renderD128:/dev/dri/renderD128
     volumes:
-      - filebrowser-config:/config
-      - filebrowser-db:/database
-      - ${FILES_DIR:-/srv}:/srv
-    environment:
-      - FB_PORT=8081
-    restart: unless-stopped
-
-  # ============================================================
-  # DASHBOARD
-  # ============================================================
-
-  homepage:
-    image: ghcr.io/gethomepage/homepage:latest
-    container_name: homepage
-    network_mode: host
-    environment:
-      - PORT=3001
-      - HOMEPAGE_ALLOWED_HOSTS=*
-    volumes:
-      - ./homepage:/app/config
-    restart: unless-stopped
-
-  # ============================================================
-  # MONITORING
-  # ============================================================
-
-  uptime-kuma:
-    image: louislam/uptime-kuma:latest
-    container_name: uptime-kuma
-    network_mode: host
-    environment:
-      - PORT=3002
-    volumes:
-      - uptime-kuma-data:/app/data
-    restart: unless-stopped
-
-  # ============================================================
-  # PLACEHOLDER: DOWNLOAD
-  # e.g. qBittorrent, Transmission, Aria2
-  # ============================================================
-
-  # qbittorrent:
-  #   image: lscr.io/linuxserver/qbittorrent:latest
-  #   container_name: qbittorrent
-  #   environment:
-  #     - PUID=1000
-  #     - PGID=1000
-  #     - WEBUI_PORT=8090
-  #   ports:
-  #     - "8090:8090"
-  #     - "6881:6881"
-  #     - "6881:6881/udp"
-  #   volumes:
-  #     - qbittorrent-config:/config
-  #     - ${DOWNLOAD_DIR:-/srv/downloads}:/downloads
-  #   restart: unless-stopped
-
-  # ============================================================
-  # AUTOMATION
-  # ============================================================
-
-  radarr:
-    image: lscr.io/linuxserver/radarr:latest
-    container_name: radarr
-    network_mode: host
+      - ./config:/config                  # config on local SSD (fast)
+      - ./cache:/cache                    # cache on local SSD
+      - /mnt/nas/media:/media:ro          # media on NAS (read only)
     environment:
       - PUID=1000
       - PGID=1000
-      - RADARR__SERVER__URLBASE=/radarr
-    volumes:
-      - radarr-config:/config
-      - ${MEDIA_DIR:-/srv/media}/Movies:/movies
-      - ${DOWNLOAD_DIR:-/srv/downloads}:/downloads
+      - TZ=Europe/London
+
+networks:
+  proxy:
+    external: true
+
+
+# ============================================================
+# FILE: /opt/homelab/immich/docker-compose.yml
+# ============================================================
+# Photo backup - replaces iCloud
+# Photos stored on NAS at /mnt/nas/photos
+# ============================================================
+
+---
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich_server
     restart: unless-stopped
+    networks:
+      - proxy
+      - immich-internal
+    volumes:
+      - /mnt/nas/photos:/usr/src/app/upload   # photos on NAS
+      - /etc/localtime:/etc/localtime:ro
+    env_file: .env
+    depends_on:
+      - immich-redis
+      - immich-postgres
 
-  # prowlarr:
-  #   image: lscr.io/linuxserver/prowlarr:latest
-  #   container_name: prowlarr
-  #   network_mode: host
-  #   environment:
-  #     - PUID=1000
-  #     - PGID=1000
-  #     - PROWLARR__SERVER__URLBASE=/prowlarr
-  #   volumes:
-  #     - prowlarr-config:/config
-  #   restart: unless-stopped
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    container_name: immich_ml
+    restart: unless-stopped
+    networks:
+      - immich-internal
+    volumes:
+      - immich-model-cache:/cache
+    env_file: .env
 
-  # ============================================================
-  # PLACEHOLDER: PASSWORD MANAGER
-  # e.g. Vaultwarden (Bitwarden compatible)
-  # ============================================================
+  immich-redis:
+    image: redis:alpine
+    container_name: immich_redis
+    restart: unless-stopped
+    networks:
+      - immich-internal
 
-  # vaultwarden:
-  #   image: vaultwarden/server:latest
-  #   container_name: vaultwarden
-  #   ports:
-  #     - "8888:80"
-  #   volumes:
-  #     - vaultwarden-data:/data
-  #   environment:
-  #     - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN:-}
-  #   restart: unless-stopped
-
-  # ============================================================
-  # FILE SHARING
-  # ============================================================
-
-  pingvin-share:
-    image: stonith404/pingvin-share:latest
-    container_name: pingvin-share
-    network_mode: host
+  immich-postgres:
+    image: tensorchord/pgvecto-rs:pg14-v0.2.0
+    container_name: immich_postgres
+    restart: unless-stopped
+    networks:
+      - immich-internal
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data   # database on local SSD (fast)
+    env_file: .env
     environment:
-      - TRUST_PROXY=true
-      - BASE_URL=http://localhost:8888/share
-    volumes:
-      - pingvin-data:/opt/app/backend/data
-      - pingvin-images:/opt/app/frontend/public/img
-    restart: unless-stopped
-
-  # ============================================================
-  # PLACEHOLDER: NOTES / WIKI
-  # e.g. Obsidian LiveSync backend, Wiki.js, Outline
-  # ============================================================
-
-  # ============================================================
-  # PLACEHOLDER: SMART HOME
-  # e.g. Home Assistant
-  # ============================================================
-
-  # homeassistant:
-  #   image: ghcr.io/home-assistant/home-assistant:stable
-  #   container_name: homeassistant
-  #   network_mode: host
-  #   volumes:
-  #     - homeassistant-config:/config
-  #     - /etc/localtime:/etc/localtime:ro
-  #   restart: unless-stopped
+      - POSTGRES_DB=${DB_DATABASE_NAME}
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
 
 volumes:
-  portainer-data:
-  caddy-data:
-  caddy-config:
-  jellyfin-cache:
-  filebrowser-config:
-  filebrowser-db:
-  radarr-config:
-  pingvin-data:
-  pingvin-images:
-  uptime-kuma-data:
-  # qbittorrent-config:
-  # prowlarr-config:
-  # vaultwarden-data:
-  # homeassistant-config:
+  immich-model-cache:
+
+networks:
+  proxy:
+    external: true
+  immich-internal:
+
+
+# ============================================================
+# FILE: /opt/homelab/immich/.env
+# ============================================================
+# DB_HOSTNAME=immich-postgres
+# DB_USERNAME=immich
+# DB_PASSWORD=changeme_strong_password
+# DB_DATABASE_NAME=immich
+# REDIS_HOSTNAME=immich-redis
+
+
+# ============================================================
+# FILE: /opt/homelab/nextcloud/docker-compose.yml
+# ============================================================
+# File sharing - replaces iCloud Drive / Dropbox
+# User files stored on NAS at /mnt/nas/documents
+# ============================================================
+
+---
+services:
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    restart: unless-stopped
+    networks:
+      - proxy
+      - nextcloud-internal
+    volumes:
+      - ./config:/var/www/html              # config on local SSD
+      - /mnt/nas/documents:/var/www/html/data  # user files on NAS
+    env_file: .env
+    depends_on:
+      - nextcloud-db
+      - nextcloud-redis
+
+  nextcloud-db:
+    image: mariadb:11
+    container_name: nextcloud_db
+    restart: unless-stopped
+    networks:
+      - nextcloud-internal
+    volumes:
+      - ./dbdata:/var/lib/mysql             # database on local SSD (fast)
+    env_file: .env
+
+  nextcloud-redis:
+    image: redis:alpine
+    container_name: nextcloud_redis
+    restart: unless-stopped
+    networks:
+      - nextcloud-internal
+
+networks:
+  proxy:
+    external: true
+  nextcloud-internal:
+
+
+# ============================================================
+# FILE: /opt/homelab/nextcloud/.env
+# ============================================================
+# MYSQL_HOST=nextcloud-db
+# MYSQL_DATABASE=nextcloud
+# MYSQL_USER=nextcloud
+# MYSQL_PASSWORD=changeme_strong_password
+# MYSQL_ROOT_PASSWORD=changeme_root_password
+# NEXTCLOUD_ADMIN_USER=admin
+# NEXTCLOUD_ADMIN_PASSWORD=changeme_admin_password
+# REDIS_HOST=nextcloud-redis
+
+
+# ============================================================
+# FILE: /opt/homelab/vaultwarden/docker-compose.yml
+# ============================================================
+# Password manager - replaces iCloud Keychain / LastPass
+# ============================================================
+
+---
+services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: unless-stopped
+    networks:
+      - proxy
+    volumes:
+      - ./data:/data                        # vault data on local SSD
+    environment:
+      - DOMAIN=https://vault.${DOMAIN}
+      - SIGNUPS_ALLOWED=false               # disable after creating accounts
+      - TZ=Europe/London
+
+networks:
+  proxy:
+    external: true
+
+
+# ============================================================
+# FILE: /opt/homelab/cloudflared/docker-compose.yml
+# ============================================================
+# Cloudflare Tunnel — exposes selected services publicly
+# without opening any ports on your router.
+#
+# Setup:
+#   1. Go to https://one.dash.cloudflare.com
+#      → Networks → Tunnels → Create a tunnel → Docker
+#   2. Copy the token and add it to /opt/homelab/.env as CF_TUNNEL_TOKEN
+#   3. In the tunnel dashboard, add Public Hostnames:
+#        jellyfin.yourdomain.com  → http://jellyfin:8096
+#        photos.yourdomain.com    → http://immich-server:2283
+#        cloud.yourdomain.com     → http://nextcloud:80
+#        vault.yourdomain.com     → http://vaultwarden:80
+#      Leave services you want private (grafana) out.
+# ============================================================
+
+---
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    networks:
+      - proxy
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN}
+
+networks:
+  proxy:
+    external: true
+
+
+# ============================================================
+# FILE: /opt/homelab/monitoring/docker-compose.yml
+# ============================================================
+# Grafana + Prometheus - see what your server is doing
+# ============================================================
+
+---
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    networks:
+      - proxy
+      - monitoring-internal
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    networks:
+      - proxy
+      - monitoring-internal
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=changeme_grafana_password
+      - TZ=Europe/London
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    restart: unless-stopped
+    networks:
+      - monitoring-internal
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  proxy:
+    external: true
+  monitoring-internal:
+
+
+# ============================================================
+# FILE: /opt/homelab/monitoring/prometheus/prometheus.yml
+# ============================================================
+# (save as separate file)
+#
+# global:
+#   scrape_interval: 15s
+#   evaluation_interval: 15s
+#
+# scrape_configs:
+#   - job_name: 'node'
+#     static_configs:
+#       - targets: ['node-exporter:9100']
+#
+#   - job_name: 'prometheus'
+#     static_configs:
+#       - targets: ['localhost:9090']
+
+
+# ============================================================
+# FILE: /opt/homelab/scripts/start-all.sh
+# ============================================================
+
+#!/bin/bash
+set -e
+cd /opt/homelab
+
+echo "Building and starting Caddy..."
+docker compose -f caddy/docker-compose.yml build
+docker compose -f caddy/docker-compose.yml up -d
+
+echo "Starting Cloudflare Tunnel..."
+docker compose -f cloudflared/docker-compose.yml up -d
+
+echo "Starting Jellyfin..."
+docker compose -f jellyfin/docker-compose.yml up -d
+
+echo "Starting Immich..."
+docker compose -f immich/docker-compose.yml up -d
+
+echo "Starting Nextcloud..."
+docker compose -f nextcloud/docker-compose.yml up -d
+
+echo "Starting Vaultwarden..."
+docker compose -f vaultwarden/docker-compose.yml up -d
+
+echo "Starting Monitoring..."
+docker compose -f monitoring/docker-compose.yml up -d
+
+echo "All services started!"
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+
+# ============================================================
+# FILE: /opt/homelab/scripts/backup-dbs.sh
+# ============================================================
+
+#!/bin/bash
+set -e
+BACKUP_DIR=/mnt/nas/backups/databases
+DATE=$(date +%F)
+mkdir -p $BACKUP_DIR
+
+echo "Backing up Immich database..."
+docker exec immich_postgres pg_dumpall -U immich | \
+  gzip > $BACKUP_DIR/immich-$DATE.sql.gz
+
+echo "Backing up Nextcloud database..."
+docker exec nextcloud_db mysqldump \
+  -u root -p${MYSQL_ROOT_PASSWORD} nextcloud | \
+  gzip > $BACKUP_DIR/nextcloud-$DATE.sql.gz
+
+# Keep last 30 days only
+find $BACKUP_DIR -name "*.sql.gz" -mtime +30 -delete
+
+echo "Database backup complete: $DATE"
+
+
+# ============================================================
+# CRON JOB - add to /etc/cron.d/homelab
+# ============================================================
+# Run DB backup every night at 3am
+# 0 3 * * * root /opt/homelab/scripts/backup-dbs.sh >> /var/log/homelab-backup.log 2>&1
